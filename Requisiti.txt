@@ -1,0 +1,21 @@
+1. Top:
+   implement  a process monitor that allows to
+   - terminate          SIGTERM    (?)
+   - kill              SIGKILL 
+   - suspend     ?    kill -TSTP $PID_OF_PROCESS    /  $ kill -STOP 16143
+   - resume     SIGCONT
+   the running processes
+   The processes are accessed via the /proc filesystem.
+   The program monitors the resources used by each process (CPU usage/ Memory usage)
+
+/proc lezione 04/26  21:53
+signal lezione 05/04
+
+per dare comandi da programma per shell vedi execl , esercitazione sdc1 , system
+ti servira anche la open/read per leggere ilcontenuto dei varifile in proc
+potrei farlo con più thread/processi
+
+il thread potrebbe popolare la ennesima struttura di un array che indica l'ennesimo processo
+nessun semaforo richiesto
+
+potrei intercettare ctrl+c per fare una gentle exiting e aspettare i thread
