@@ -19,3 +19,24 @@ il thread potrebbe popolare la ennesima struttura di un array che indica l'ennes
 nessun semaforo richiesto
 
 potrei intercettare ctrl+c per fare una gentle exiting e aspettare i thread
+
+-----info generiche non singolo processo
+
+cat /proc/meminfo, /cpuinfo
+
+
+-- info su processo 
+
+cs processo /status,interrupts, fd ,environ
+
+
+cat crypto | grep name     -algoritmi cifratura disponibili
+    
+
+utile per fare un check
+ps -p <pid> -o %cpu,%mem,cmd
+
+
+-- per trovare percentuale cpu usata dalprocesso :
+         leggo quella totale da proc/stat
+         e quella del processo da proc/pid/stat
