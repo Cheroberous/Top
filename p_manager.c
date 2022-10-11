@@ -14,18 +14,21 @@
 
 // implementa struttura con info per ogni  processo 
 typedef struct proc_info_s {
-    int     PID;
     int     cpu_usage;
     int     mem_usage;
     int     mem_free;
+    int     cpu_usage_after;
+    int     mem_usage_after;
 } proc_info_t;
 
 typedef struct proc_info_new {
     int     PID;
     char stato;
-    char nome[20];
+    char nome[30];
     unsigned long int     time_u;
     unsigned long int     time_k;
+    unsigned long int     time_u_after;
+    unsigned long int     time_k_after;
     int time_cu;
     int time_ck;
 } proc_info_new_t;
@@ -35,12 +38,15 @@ typedef struct proc_info_new {
 
 #define QUIT_COMMAND  "QUIT"
 
-char** alloca_m(int n);
-int popola_ris(char** m,int n,struct dirent** files_1);
+char** alloca_m(int n);  // aloca matrice s
 
-void get_info_proc(char* pid,void* struttura);
+int popola_ris(char** m,int n,struct dirent** files_1); // seleziona solo pid da /proc
 
-void get_info_tot(void* info_sis);
+void get_info_proc(char* pid,void* struttura,int t);  // prende info singolo processo
+
+void get_info_all(char** tutti_pid,void** struttura);  
+
+void get_info_tot(void* info_sis, int t);  // orende innfo sistema (da finire con memoria)
 
 int main(int argc,char* argv[]){
 
@@ -72,6 +78,7 @@ int main(int argc,char* argv[]){
 
 
         char* richiesta=(char*)malloc(20);
+        memset((void*)richiesta,0,20);
         richiesta=fgets(richiesta, 20, stdin);  // prendo input
 
         //printf("primo carattere == %c\n",richiesta[0]);
@@ -82,9 +89,9 @@ int main(int argc,char* argv[]){
 
 
 
-        while ( msg_len != quit_command_len && memcmp(richiesta, quit_command, quit_command_len)!=0) continue;
+        //while ( msg_len != quit_command_len && memcmp(richiesta, quit_command, quit_command_len)!=0) continue; non so perchè ma da problemi(senza funge)
 
-        if(memcmp(richiesta, quit_command, quit_command_len)==0){printf("qui");break;
+        if(memcmp(richiesta, quit_command, quit_command_len)==0){printf("qui");break;}
     
 
 
@@ -114,18 +121,58 @@ int main(int argc,char* argv[]){
 
         int quanti=popola_ris(file_in_proc,n,files);
 
-        // prendo info base   SISTEMA
+       
 
-        get_info_tot((void*)struttura);
+      
 
-        printf("trovati dati:\ncpu tot == %d\nmem_usage == %d\nmem_free == %d\n",struttura->cpu_usage,struttura->mem_usage,struttura->mem_free);
+        // questo fallo in una funzione 
 
-        get_info_proc("3758",(void*)info_proc);
+        // ------------------------------------------------------------------------   QUI   -------------------------------
+
+         // prendo info base   SISTEMA
+
+        get_info_tot((void*)struttura,1);
+
+        get_info_proc("5582",(void*)info_proc,1);  // prima della sleep
+
+       
+
+        sleep(4);
+
+        get_info_tot((void*)struttura,0);
+
+        printf("\ntrovati dati SISTEMA:\ncpu tot == %d\nmem_usage == %d\n",struttura->cpu_usage,struttura->mem_usage);
+
+        printf("trovati dati SISTEMA after :\ncpu tot == %d\nmem_usage == %d\n",struttura->cpu_usage_after,struttura->mem_usage);
+
+        get_info_proc("5582",(void*)info_proc,0);
+
+         printf("\nraccolti dati PROCESSO: \n tempo_user == %ld\n tempo_k == %ld\n",info_proc->time_u,info_proc->time_k);
+
+        printf("raccolti dati PROCESSO after: \n tempo_user_a == %ld\n tempo_k_a == %ld\n",info_proc->time_u_after,info_proc->time_k_after);
+
+        int ris=info_proc->time_u_after-info_proc->time_u;
+        printf("DIFFERENZA Utime_processo == %d\n",ris);
+        int ris_2=info_proc->time_k_after-info_proc->time_k;
+        printf("DIFFERENZA Ktime_processo == %d\n",ris_2);
+        int ris_1=struttura->cpu_usage_after-struttura->cpu_usage;
+        printf("DIFFERENZA time CPU == %d\n",ris_1);
+        
+        float p=(float)ris/(float)ris_1;
+        float p1=(float)ris_2/(float)ris_1;
+
+        printf("\n\npercentuale utilizzo user_mode == %f\n\n",p*100);
+        printf("\n\npercentuale utilizzo KERNEL_mode == %f\n\n",p1*100);
+
+    //----------------------------------------------------------------------------------------------------------------------------------------------
 
 
         printf("USCITO DA FUNZIONE");
 
-        //printf("valori raccolti: \n PID == %d \ntempo user mode == %lu \n tempo kernel mode %lu \n_",info_proc->PID,info_proc->time_u,info_proc->time_k);
+
+
+
+        
 
         /*  check file selezionati
         printf("stampo file salvati in proc (quelli numerici)\n");
@@ -154,8 +201,6 @@ int main(int argc,char* argv[]){
     }
 
 
-
-
     printf("entrato comando quit \n");
     fflush(stdout);
     
@@ -166,7 +211,7 @@ int main(int argc,char* argv[]){
 
 
 
-void get_info_proc(char* pid,void* struttura){
+void get_info_proc(char* pid,void* struttura, int t){
 
     proc_info_new_t* dati=(proc_info_new_t*)struttura;
     //memset((void*)dati,0,sizeof(dati));
@@ -176,7 +221,7 @@ void get_info_proc(char* pid,void* struttura){
     long unsigned int valori_lu[6];
     int valori_i[8];
     unsigned val_u;
-    char* nome_p=malloc(20);
+    char* nome_p=malloc(30);
     char stato;
     memset((void*)valori_lu,0,6);
     memset((void*)valori_i,0,8);
@@ -195,7 +240,7 @@ void get_info_proc(char* pid,void* struttura){
 
     FILE* fd=fopen(percorso,"r");
     if(fd==NULL){
-        printf("errore apertura\n");
+        printf("errore apertura il processonon esiste\n");
         exit(EXIT_FAILURE);
     }
     // 14 ,15 u k 16 17 figli
@@ -205,28 +250,29 @@ void get_info_proc(char* pid,void* struttura){
               ,&val_u,&valori_lu[0],&valori_lu[1],&valori_lu[2],&valori_lu[3],&valori_lu[4],&valori_lu[5],&valori_i[6]
               ,&valori_i[7] );
 
-
-
-
-
     fclose(fd);
-    printf("vediamo %d %s %c %d %d %d %d %d %u %lu %lu %lu %lu \n questo %lu %lu %d %d \n",valori_i[0],nome_p,stato,valori_i[1],valori_i[2],valori_i[3],valori_i[4],valori_i[5]
-              ,val_u,valori_lu[0],valori_lu[1],valori_lu[2],valori_lu[3],valori_lu[4],valori_lu[5],valori_i[6],valori_i[7]);
+    //printf("vediamo %d %s %c %d %d %d %d %d %u %lu %lu %lu %lu \n questo %lu %lu %d %d \n",valori_i[0],nome_p,stato,valori_i[1],valori_i[2],valori_i[3],valori_i[4],valori_i[5]
+      //        ,val_u,valori_lu[0],valori_lu[1],valori_lu[2],valori_lu[3],valori_lu[4],valori_lu[5],valori_i[6],valori_i[7]);
     
     dati->PID=valori_i[0];
     //dati->nome=nome_p;
-    //strcpy(dati->nome,nome_p);
-  
-
-    dati->time_u=valori_lu[4];
-    dati->time_k=valori_lu[5];
-    dati->time_cu=valori_i[6];
+    strcpy(dati->nome,nome_p);
+     dati->time_cu=valori_i[6];
     dati->time_ck=valori_i[7];
+    if(t!=0){
+        dati->time_u=valori_lu[4];
+        dati->time_k=valori_lu[5];
+    }
+    else{
+        dati->time_u_after=valori_lu[4];
+        dati->time_k_after=valori_lu[5];
+    }
+   
 
     return;
 }
 
-void get_info_tot(void* info_sis){
+void get_info_tot(void* info_sis, int t){
 
     proc_info_t* dati=(proc_info_t*)info_sis;
 
@@ -256,10 +302,16 @@ void get_info_tot(void* info_sis){
     fscanf(fd_1,"%s %d %s %s %d",c1,&mem_tot,c2,c3,&mem_free);    // valori giusti
     //printf("memoria totale == %d\nmemoria libera == %d\n",mem_tot,mem_free);
 
-    dati->cpu_usage=sum;
-    dati->mem_usage=mem_tot;
+    if(t!=0){
+        dati->cpu_usage=sum;
+        dati->mem_usage=mem_tot;
+        }
+    else{
+        dati->cpu_usage_after=sum;
+        dati->mem_usage_after=mem_tot;
+    }
     dati->mem_free=mem_free;
-    dati->PID=0;
+    
 
     fclose(fd_1);
 
@@ -270,11 +322,9 @@ void get_info_tot(void* info_sis){
 char** alloca_m(int n){
     char** m;
     m = malloc(n * sizeof(char *));
-    for (int r = 0; r < n; r++){
-            
-        *(m + r) = malloc(20 * sizeof(char)); // 20 abbastanza arbitrario (dovresti aggiustare)
+    for (int r = 0; r < n; r++){           
+        *(m + r) = malloc(20 * sizeof(char)); // 20 abbastanza arbitrario (dovresti aggiustare) (lunghezza pid)
     }
-    
     return m;
 
 }
@@ -321,3 +371,4 @@ int popola_ris(char** m,int n, struct dirent** files_1){
        return k;
 
 }
+

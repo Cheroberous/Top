@@ -7,7 +7,7 @@ USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
    - resume     SIGCONT
    the running processes
    The processes are accessed via the /proc filesystem.
-   The program monitors the resources used by each process (CPU usage/ Memory usage)
+   The program monitors the resources used by each process (CPU usage/ Memory usage) ------------------- manca memory usage
 
 /proc lezione 04/26  21:53
 signal lezione 05/04
