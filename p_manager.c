@@ -20,13 +20,25 @@ typedef struct proc_info_s {
     int     mem_free;
 } proc_info_t;
 
+typedef struct proc_info_new {
+    int     PID;
+    char stato;
+    char nome[20];
+    unsigned long int     time_u;
+    unsigned long int     time_k;
+    int time_cu;
+    int time_ck;
+} proc_info_new_t;
+
+
+
 
 #define QUIT_COMMAND  "QUIT"
 
 char** alloca_m(int n);
 int popola_ris(char** m,int n,struct dirent** files_1);
 
-//void get_info_proc(char* pid,struct proc_info_t* struttura);
+void get_info_proc(char* pid,void* struttura);
 
 void get_info_tot(void* info_sis);
 
@@ -54,8 +66,10 @@ int main(int argc,char* argv[]){
 
     while(1){
 
-
+        printf("sono nel ciclo\n");
         proc_info_t* struttura = malloc(sizeof(proc_info_t));
+        proc_info_new_t* info_proc = malloc(sizeof(proc_info_new_t));
+
 
         char* richiesta=(char*)malloc(20);
         richiesta=fgets(richiesta, 20, stdin);  // prendo input
@@ -70,7 +84,7 @@ int main(int argc,char* argv[]){
 
         while ( msg_len != quit_command_len && memcmp(richiesta, quit_command, quit_command_len)!=0) continue;
 
-        if(memcmp(richiesta, quit_command, quit_command_len)==0)break;
+        if(memcmp(richiesta, quit_command, quit_command_len)==0){printf("qui");break;
     
 
 
@@ -100,14 +114,18 @@ int main(int argc,char* argv[]){
 
         int quanti=popola_ris(file_in_proc,n,files);
 
-        // prendo info base
-
-        
+        // prendo info base   SISTEMA
 
         get_info_tot((void*)struttura);
 
         printf("trovati dati:\ncpu tot == %d\nmem_usage == %d\nmem_free == %d\n",struttura->cpu_usage,struttura->mem_usage,struttura->mem_free);
 
+        get_info_proc("3758",(void*)info_proc);
+
+
+        printf("USCITO DA FUNZIONE");
+
+        //printf("valori raccolti: \n PID == %d \ntempo user mode == %lu \n tempo kernel mode %lu \n_",info_proc->PID,info_proc->time_u,info_proc->time_k);
 
         /*  check file selezionati
         printf("stampo file salvati in proc (quelli numerici)\n");
@@ -115,10 +133,12 @@ int main(int argc,char* argv[]){
         for (int j=0;j<quanti;j++){
 
             printf("file == > %s\n", file_in_proc[j]);
-            
-
         }
         printf("FINE STAMPA\n");*/
+
+
+
+
 
         // free 
         for (int i = 0; i < n; i++) {
@@ -126,9 +146,9 @@ int main(int argc,char* argv[]){
         }
         free(files);
 
-        printf("DEALLOCATO\n");
+        printf("\nDEALLOCATO\n");
 
-        //--------------------------------------------prendo info-------------------------------------------------------
+
 
 
     }
@@ -139,27 +159,86 @@ int main(int argc,char* argv[]){
     printf("entrato comando quit \n");
     fflush(stdout);
     
-
+    return 0;
 
 }
 
 
 
 
+void get_info_proc(char* pid,void* struttura){
+
+    proc_info_new_t* dati=(proc_info_new_t*)struttura;
+    //memset((void*)dati,0,sizeof(dati));
+    
+
+
+    long unsigned int valori_lu[6];
+    int valori_i[8];
+    unsigned val_u;
+    char* nome_p=malloc(20);
+    char stato;
+    memset((void*)valori_lu,0,6);
+    memset((void*)valori_i,0,8);
+    
+
+
+    // /proc/PID/stat
+    char* percorso=malloc(20);
+    memset((void*)percorso,0,20);
+    const char* pid_1=pid;
+
+    strcat(percorso, "/proc/");
+    strcat(percorso, pid_1);
+    strcat(percorso, "/stat");
+    printf("percorso cercato== %s\n",percorso);
+
+    FILE* fd=fopen(percorso,"r");
+    if(fd==NULL){
+        printf("errore apertura\n");
+        exit(EXIT_FAILURE);
+    }
+    // 14 ,15 u k 16 17 figli
+
+
+    fscanf(fd,"%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %d %d \n",&valori_i[0],nome_p,&stato,&valori_i[1],&valori_i[2],&valori_i[3],&valori_i[4],&valori_i[5]
+              ,&val_u,&valori_lu[0],&valori_lu[1],&valori_lu[2],&valori_lu[3],&valori_lu[4],&valori_lu[5],&valori_i[6]
+              ,&valori_i[7] );
+
+
+
+
+
+    fclose(fd);
+    printf("vediamo %d %s %c %d %d %d %d %d %u %lu %lu %lu %lu \n questo %lu %lu %d %d \n",valori_i[0],nome_p,stato,valori_i[1],valori_i[2],valori_i[3],valori_i[4],valori_i[5]
+              ,val_u,valori_lu[0],valori_lu[1],valori_lu[2],valori_lu[3],valori_lu[4],valori_lu[5],valori_i[6],valori_i[7]);
+    
+    dati->PID=valori_i[0];
+    //dati->nome=nome_p;
+    //strcpy(dati->nome,nome_p);
+  
+
+    dati->time_u=valori_lu[4];
+    dati->time_k=valori_lu[5];
+    dati->time_cu=valori_i[6];
+    dati->time_ck=valori_i[7];
+
+    return;
+}
 
 void get_info_tot(void* info_sis){
 
     proc_info_t* dati=(proc_info_t*)info_sis;
 
-    int val1=0,val2=0,val3=0,val4=0,val5=0,val6=0,val7=0;
+    int v1=0,v2=0,v3=0,v4=0,v5=0,v6=0,v7=0;
     char* n=malloc(5);
     FILE* fd=fopen("/proc/stat","r");
     if(fd==NULL){
         printf("errore apertura\n");
         exit(EXIT_FAILURE);
     }
-    fscanf(fd,"%s %d %d %d %d %d %d %d \n",n,&val1,&val2,&val3,&val4,&val5,&val6,&val7);
-    int sum=val1+val2+val3+val4+val5+val6+val7;   //somma cpu giusta
+    fscanf(fd,"%s %d %d %d %d %d %d %d \n",n,&v1,&v2,&v3,&v4,&v5,&v6,&v7);
+    int sum=v1+v2+v3+v4+v5+v6+v7;   //somma cpu giusta
     //printf("ris == %d\n",sum);
     //printf("aperto\n");
 
@@ -182,6 +261,7 @@ void get_info_tot(void* info_sis){
     dati->mem_free=mem_free;
     dati->PID=0;
 
+    fclose(fd_1);
 
     return;
 }
