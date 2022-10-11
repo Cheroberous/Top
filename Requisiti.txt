@@ -1,3 +1,4 @@
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 1. Top:
    implement  a process monitor that allows to
    - terminate          SIGTERM    (?)
@@ -22,7 +23,7 @@ potrei intercettare ctrl+c per fare una gentle exiting e aspettare i thread
 
 -----info generiche non singolo processo
 
-cat /proc/meminfo, /cpuinfo
+cat /proc/meminfo, /cpuinfo   -------------------------------------------------- FATTO 
 
 
 -- info su processo 
@@ -38,5 +39,9 @@ ps -p <pid> -o %cpu,%mem,cmd
 
 
 -- per trovare percentuale cpu usata dalprocesso :
-         leggo quella totale da proc/stat
+         leggo quella totale da proc/stat            ------------------------------- FATTO
          e quella del processo da proc/pid/stat
+
+//----------------------------------------------------
+
+calcola in percentuale la memoria/cpu usata dal processo

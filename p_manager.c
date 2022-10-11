@@ -8,11 +8,27 @@
 
 #include <sys/types.h>
 #include <sys/dir.h>
-//
+
+#include <sys/stat.h>
+#include <fcntl.h>
+
+// implementa struttura con info per ogni  processo 
+typedef struct proc_info_s {
+    int     PID;
+    int     cpu_usage;
+    int     mem_usage;
+    int     mem_free;
+} proc_info_t;
+
+
 #define QUIT_COMMAND  "QUIT"
 
 char** alloca_m(int n);
 int popola_ris(char** m,int n,struct dirent** files_1);
+
+//void get_info_proc(char* pid,struct proc_info_t* struttura);
+
+void get_info_tot(void* info_sis);
 
 int main(int argc,char* argv[]){
 
@@ -23,6 +39,11 @@ int main(int argc,char* argv[]){
     char *quit_command = QUIT_COMMAND;
     size_t quit_command_len = strlen(quit_command);
 
+    //struct proc_info_
+
+    //chiamo fnz per val iniziali
+
+
     printf("lunghezza quit command == %ld\n",quit_command_len);
 
     char*arg1=malloc(20);
@@ -32,6 +53,9 @@ int main(int argc,char* argv[]){
 
 
     while(1){
+
+
+        proc_info_t* struttura = malloc(sizeof(proc_info_t));
 
         char* richiesta=(char*)malloc(20);
         richiesta=fgets(richiesta, 20, stdin);  // prendo input
@@ -76,6 +100,16 @@ int main(int argc,char* argv[]){
 
         int quanti=popola_ris(file_in_proc,n,files);
 
+        // prendo info base
+
+        
+
+        get_info_tot((void*)struttura);
+
+        printf("trovati dati:\ncpu tot == %d\nmem_usage == %d\nmem_free == %d\n",struttura->cpu_usage,struttura->mem_usage,struttura->mem_free);
+
+
+        /*  check file selezionati
         printf("stampo file salvati in proc (quelli numerici)\n");
         
         for (int j=0;j<quanti;j++){
@@ -84,22 +118,18 @@ int main(int argc,char* argv[]){
             
 
         }
-
-        printf("FINE STAMPA\n");
+        printf("FINE STAMPA\n");*/
 
         // free 
         for (int i = 0; i < n; i++) {
             free(files[i]);
         }
         free(files);
+
         printf("DEALLOCATO\n");
 
+        //--------------------------------------------prendo info-------------------------------------------------------
 
-
-        //printf("Files in Directory are: \n");
-        //execl("/bin/ls","/home/paolascema/Scrivania/ls","-l",0);    // funge
-        //deve essere eseguitada un thread/processo altrimenti mi fa terminare il programma
-        // non posso cambiare la directory
 
     }
 
@@ -111,6 +141,49 @@ int main(int argc,char* argv[]){
     
 
 
+}
+
+
+
+
+
+void get_info_tot(void* info_sis){
+
+    proc_info_t* dati=(proc_info_t*)info_sis;
+
+    int val1=0,val2=0,val3=0,val4=0,val5=0,val6=0,val7=0;
+    char* n=malloc(5);
+    FILE* fd=fopen("/proc/stat","r");
+    if(fd==NULL){
+        printf("errore apertura\n");
+        exit(EXIT_FAILURE);
+    }
+    fscanf(fd,"%s %d %d %d %d %d %d %d \n",n,&val1,&val2,&val3,&val4,&val5,&val6,&val7);
+    int sum=val1+val2+val3+val4+val5+val6+val7;   //somma cpu giusta
+    //printf("ris == %d\n",sum);
+    //printf("aperto\n");
+
+    fclose(fd);
+
+    int mem_tot=0,mem_free=0;
+    char* c1=(char*)malloc(20);
+    char *c3=(char*)malloc(20);
+    char* c2=malloc(4);
+    FILE* fd_1=fopen("/proc/meminfo","r");
+    if(fd_1==NULL){
+        printf("errore apertura\n");
+        exit(EXIT_FAILURE);
+    }
+    fscanf(fd_1,"%s %d %s %s %d",c1,&mem_tot,c2,c3,&mem_free);    // valori giusti
+    //printf("memoria totale == %d\nmemoria libera == %d\n",mem_tot,mem_free);
+
+    dati->cpu_usage=sum;
+    dati->mem_usage=mem_tot;
+    dati->mem_free=mem_free;
+    dati->PID=0;
+
+
+    return;
 }
 
 
