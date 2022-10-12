@@ -12,6 +12,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+// provvisorie 
+#include <stdint.h>
+#include "sys/sysinfo.h"
+
 // implementa struttura con info per ogni  processo 
 // struttura per dati sistema 
 typedef struct cpu_info {    // cpu info
@@ -49,7 +53,9 @@ typedef struct proc_stat{
 
 
 #define QUIT_COMMAND  "QUIT"
-void get_mem_proc();                   // prende memoria fisicae virtuale singolo processo
+void get_mem_proc(float* qui);                   // prende memoria fisica e virtuale singolo processo  ( aggiungi char* per dargli pid in input)
+
+void get_mem_sistema();
 
 int parseLine(char* line);
 
@@ -66,6 +72,9 @@ void get_percent_one(char* pid_da_arr,void* struttura_cpu,void* struttura_proc ,
 void get_info_tot(void* info_sis, int t);  // orende innfo sistema (da finire con memoria)
 
 int main(int argc,char* argv[]){
+    float val=0;
+    float* p_val=&val;
+    
 
     // ORGANIZZO VARIABILI
     struct dirent **files;
@@ -89,7 +98,7 @@ int main(int argc,char* argv[]){
 
     while(1){
 
-        //printf("sono nel ciclo\n");
+        printf("sono nel ciclo\n");
       
 
 
@@ -158,8 +167,25 @@ int main(int argc,char* argv[]){
         // raccolgo e printo percentuali CPU usage
 
         //  --------------------------------------------------------------------------------------------
+         printf("\nRICHIEDO DATI MEM PROCESSO \n");
+        get_mem_proc(p_val);                             // MEORIA SINGOLO PROCESSO------------------FUNZIONA
 
-        get_mem_proc();
+        //get_mem_sistema();
+
+
+           // I VALORIPRESI SONO QUELLI DELLA RAM FISICA , vm rss , vm size della virtuale capire come ottenere valore %MEM che vedi in top
+
+           //prendi vm_rss (ram proc) dividi per 1024 poi dividi per (ram totale/1024)
+        printf("RAM processo == %f\n",*p_val);
+
+        *p_val=*p_val/1024;
+
+        printf("RAM processo == %f\n",*p_val);
+
+
+        float per_mem=(float)(*p_val)/6839.2;
+
+        printf("percentuale uso ram == %f\n\n",per_mem*100);
 
         printf("USCITO DA FUNZIONE");
 
@@ -452,20 +478,20 @@ typedef struct proc_stat{
 }proc_stat_t;
 
 */
-void get_mem_proc(){ 
+void get_mem_proc(float* qui){ 
 
     /*strcat(percorso, "/proc/");
     strcat(percorso, pid_1);
     strcat(percorso, "/stat");*/
 
-    FILE* file = fopen("/proc/3678/status", "r");
+    FILE* file = fopen("/proc/2222/status", "r");
     if(file==NULL){
         printf("errore apertura file proc_mem\n");
         exit(EXIT_FAILURE);
     }
     char line[128];
     int res=0;
-    FILE* file_1 = fopen("/proc/3678/status", "r");
+    FILE* file_1 = fopen("/proc/7696/status", "r");
     if(file==NULL){
         printf("errore apertura file proc_mem\n");
         exit(EXIT_FAILURE);
@@ -489,12 +515,13 @@ void get_mem_proc(){
     fclose(file);
     fclose(file_1);
     printf("Memoria fisica proc == %d\n",res);
+    *qui=res;
     printf("Memoria virtuale proc  == %d\n",res_1);
     
 
     return;
 }
-int parseLine(char* line){
+int parseLine(char* line){   
     // This assumes that a digit will be found and the line ends in " Kb".
     int i = strlen(line);
     const char* p = line;
@@ -502,4 +529,24 @@ int parseLine(char* line){
     line[i-3] = '\0';
     i = atoi(p);
     return i;
+}
+
+void get_mem_sistema(){
+    struct sysinfo memInfo;
+
+    sysinfo (&memInfo);
+
+    int32_t p=0;
+    int32_t after=0;
+    p=(uint64_t)memInfo.totalram;
+
+    after = ((uint64_t)memInfo.totalram * memInfo.mem_unit)/1024;          // giusto valore totale (mem total (RAM))
+
+
+    printf("controllo valori %d mem unit == %d\n",p,memInfo.mem_unit);
+
+    printf("VEDIAMO == %d\n",after);
+
+
+
 }

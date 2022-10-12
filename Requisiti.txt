@@ -7,7 +7,7 @@ USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
    - resume     SIGCONT
    the running processes
    The processes are accessed via the /proc filesystem.
-   The program monitors the resources used by each process (CPU usage/ Memory usage) ------------------- manca memory usage
+   The program monitors the resources used by each process (CPU usage/ Memory usage) ------------------- FATTO 
 
 /proc lezione 04/26  21:53
 signal lezione 05/04
@@ -17,8 +17,8 @@ signal lezione 05/04
 
 ------------- mappa campi struttura sis in corrispettivi da proc 
 
-/proc/meminfo,  ----------------------------------------------------------------------------                M
-calcola in percentuale la memoria usata----------------------------------------------------------------                 M
+/proc/meminfo,  ----------------------------------------------------------------------------                FATTO
+calcola in percentuale la memoria usata----------------------------------------------------------------                 FATTO
 
 
 
@@ -29,14 +29,14 @@ nessun semaforo richiesto
 
 potrei intercettare ctrl+c per fare una gentle exiting e aspettare i thread
 
------info generiche isstema
+-----info generiche isstema ---------------------------------------------------------------------- M
 
 cat  /cpuinfo   -------------------------------------------------- FATTO 
 
 -- info su processo 
 
 cs processo /status ------ FATTO
-,interrupts, fd ,environ
+,interrupts, fd ,environ--------------------------------------------------------------------   M
 
 
 cat crypto | grep name     -algoritmi cifratura disponibili
