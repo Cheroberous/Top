@@ -11,24 +11,32 @@ USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 
 /proc lezione 04/26  21:53
 signal lezione 05/04
+//---------------------------------------------------- implementare invio segnali
 
-per dare comandi da programma per shell vedi execl , esercitazione sdc1 , system
-ti servira anche la open/read per leggere ilcontenuto dei varifile in proc
-potrei farlo con più thread/processi
 
-il thread potrebbe popolare la ennesima struttura di un array che indica l'ennesimo processo
+
+------------- mappa campi struttura sis in corrispettivi da proc 
+
+/proc/meminfo,  ----------------------------------------------------------------------------                M
+calcola in percentuale la memoria usata----------------------------------------------------------------                 M
+
+
+
+calcolo cpu/mem con più thread/processi
+
+il thread potrebbe popolare la ennesima struttura di un array che indica l'ennesimo processo // per ora fatto senza thread
 nessun semaforo richiesto
 
 potrei intercettare ctrl+c per fare una gentle exiting e aspettare i thread
 
------info generiche non singolo processo
+-----info generiche isstema
 
-cat /proc/meminfo, /cpuinfo   -------------------------------------------------- FATTO 
-
+cat  /cpuinfo   -------------------------------------------------- FATTO 
 
 -- info su processo 
 
-cs processo /status,interrupts, fd ,environ
+cs processo /status ------ FATTO
+,interrupts, fd ,environ
 
 
 cat crypto | grep name     -algoritmi cifratura disponibili
@@ -44,4 +52,6 @@ ps -p <pid> -o %cpu,%mem,cmd
 
 //----------------------------------------------------
 
-calcola in percentuale la memoria/cpu usata dal processo
+
+
+cpu usata dal processo           ------------------------------------------------ FATTO
