@@ -6,20 +6,21 @@ USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
    - suspend     ?    kill -TSTP $PID_OF_PROCESS    /  $ kill -STOP 16143
    - resume     SIGCONT
    the running processes
-   The processes are accessed via the /proc filesystem.
-   The program monitors the resources used by each process (CPU usage/ Memory usage) ------------------- FATTO 
 
-/proc lezione 04/26  21:53
+   
+   ---------------- Ricordati che esistono i puntatori a funzione
+
+
+
+//-------------------               implementare invio segnali              --------------------------
+
 signal lezione 05/04
-//---------------------------------------------------- implementare invio segnali
 
 
 
-------------- mappa campi struttura sis in corrispettivi da proc 
+------------- mappa campi struttura sis in corrispettivi da proc  ( non ricordo )
 
-/proc/meminfo,  ----------------------------------------------------------------------------                FATTO
-calcola in percentuale la memoria usata----------------------------------------------------------------                 FATTO
-
+----                                    inserisci i thread                 -------------------------------
 
 
 calcolo cpu/mem con più thread/processi
@@ -29,17 +30,62 @@ nessun semaforo richiesto
 
 potrei intercettare ctrl+c per fare una gentle exiting e aspettare i thread
 
------info generiche isstema ---------------------------------------------------------------------- M
+
+-----                                     info generiche sistema                             -------------------- 
+
+
+,interrupts, fd ,environ
+cat crypto | grep name     -algoritmi cifratura disponibili
+
+
+/////////////_----------------------------------------------------------------------------------------------////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/proc lezione 04/26  21:53
+
+
+The processes are accessed via the /proc filesystem.
+The program monitors the resources used by each process (CPU usage/ Memory usage) ------------------- FATTO 
+
+/proc/meminfo,  ----------------------------------------------------------------------------                FATTO
+calcola in percentuale la memoria usata----------------------------------------------------------------                 FATTO
 
 cat  /cpuinfo   -------------------------------------------------- FATTO 
 
 -- info su processo 
 
 cs processo /status ------ FATTO
-,interrupts, fd ,environ--------------------------------------------------------------------   M
 
 
-cat crypto | grep name     -algoritmi cifratura disponibili
+
+
     
 
 utile per fare un check

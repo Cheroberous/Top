@@ -1,20 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <errno.h>
+#include <errno.h>             // FINALMENTE I VALORI DELLA CPU USAGE SONO TUTTI GIUSTI, IMPLEMENTA RISPOSTAA SEGNALI
 #include <string.h>
 #include <unistd.h>
 #include <regex.h> 
                         // IMPLEMENTARE USO MEMORIA
 #include <sys/types.h>
 #include <sys/dir.h>
-
+#include <pthread.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 
 // provvisorie 
 #include <stdint.h>
 #include "sys/sysinfo.h"
+
+#define QUIT_COMMAND  "QUIT"
+#define MAX_PID  10
 
 // implementa struttura con info per ogni  processo 
 // struttura per dati sistema 
@@ -49,13 +52,22 @@ typedef struct proc_stat{
     float memory_usage;
 }proc_stat_t;
 
+typedef struct thread_args_s {
+    struct proc_stat* p_s;
+    struct proc_info_new* p_i_n;
+    struct cpu_info* c_i;
+    char* pid_proc;
+    float valore_ram;
+
+} thread_args_t;
 
 
 
-#define QUIT_COMMAND  "QUIT"
-void get_mem_proc(float* qui);                   // prende memoria fisica e virtuale singolo processo  ( aggiungi char* per dargli pid in input)
 
-void get_mem_sistema();
+
+void get_mem_proc(float* fisica,float*virtuale,char* pid_p,float Ram_v);  // prende memoria fisica e virtuale singolo processo (pid_p)
+
+int get_mem_sistema(); // prende solo ram sistema
 
 int parseLine(char* line);
 
@@ -65,11 +77,13 @@ void printa(void* struttura);
 
 int popola_ris(char** m,int n,struct dirent** files_1); // seleziona solo pid da /proc
 
+
 void get_info_proc(char* pid,void* struttura,int t);  // prende info singolo processo
 
-void get_percent_one(char* pid_da_arr,void* struttura_cpu,void* struttura_proc , void* stat_struct);  
+//void* get_percent_one(char* pid_da_arr,void* struttura_cpu,void* struttura_proc , void* stat_struct);  // ricava percentuali (cpu) di uno
+void* get_percent_one(void* arg_struct);  // ricava percentuali (cpu) di uno
 
-void get_info_tot(void* info_sis, int t);  // orende innfo sistema (da finire con memoria)
+void get_info_tot(void* info_sis, int t);  // usata per calcolare percentuale cpu di un processo, prendo uso cpu prima e dopo la sleep
 
 int main(int argc,char* argv[]){
     float val=0;
@@ -77,17 +91,17 @@ int main(int argc,char* argv[]){
     
 
     // ORGANIZZO VARIABILI
-    struct dirent **files;
+    struct dirent **files;   // struttura per ls
     int r;
-    char** file_in_proc;
+    char** file_in_proc;                         // array con lista processi
     char *quit_command = QUIT_COMMAND;
     size_t quit_command_len = strlen(quit_command);
+    // richiedo ram totale pc
+    int r1=get_mem_sistema();
+    float Ram=(float)(r1/1024);
+    printf("effettiva ram== %f\n",Ram);
 
     //struct proc_info_
-
-    //chiamo fnz per val iniziali
-
-
     //printf("lunghezza quit command == %ld\n",quit_command_len);
 
     char*arg1=malloc(20);
@@ -100,7 +114,7 @@ int main(int argc,char* argv[]){
 
         printf("sono nel ciclo\n");
       
-
+       // PRENDO E VERIFICO INPUT
 
         char* richiesta=(char*)malloc(20);
         memset((void*)richiesta,0,20);
@@ -110,6 +124,7 @@ int main(int argc,char* argv[]){
 
         int msg_len = strlen(richiesta);
         richiesta[--msg_len]='\0';         //se voglio togliere \n
+
         //printf("lunghezza == %d\n",msg_len);
 
 
@@ -119,16 +134,13 @@ int main(int argc,char* argv[]){
         if(memcmp(richiesta, quit_command, quit_command_len)==0){printf("qui");break;}
     
 
-
-
-       
-   
         //printf("eseguo comando == %s\n",richiesta);
         
         //----------------------------------------------------------------------------------------
         // getcwd per la directory corrente
 
-      
+
+        //SCANDISCO DIR PROC E POPOLO ARRAY CON PID
         
         int n = scandir("/proc", &files, NULL, alphasort); // metto risultato scandir nella struct files
 
@@ -141,7 +153,7 @@ int main(int argc,char* argv[]){
         file_in_proc=alloca_m(n);        // alloco matrice per nomi
 
       
-        int quanti=popola_ris(file_in_proc,n,files);       // filtro risultati
+        int quanti=popola_ris(file_in_proc,n,files);       // filtro risultati       ---------------NUMERO PROCESSI
 
         /*  check file selezionati
         printf("stampo file salvati in proc (quelli numerici)\n");
@@ -153,58 +165,66 @@ int main(int argc,char* argv[]){
         printf("FINE STAMPA\n");*/
 
 
-       // inizializzo strutture necessarie                                                      CPU STAT
+       // inizializzo strutture necessarie                  (poi mettilo all'inizio)         CPU STAT
         cpu_info_t* struttura = malloc(sizeof(cpu_info_t));
         proc_info_new_t* info_proc = malloc(sizeof(proc_info_new_t));
         proc_stat_t* riempi=malloc(sizeof(proc_stat_t));
 
-        //char* analizza=file_in_proc[0];
-
-        //get_percent_one("4758",(void*)struttura,(void*)info_proc,(void*)riempi);
-
-        //printa((void*)riempi);
-
-        // raccolgo e printo percentuali CPU usage
+ 
 
         //  --------------------------------------------------------------------------------------------
-         printf("\nRICHIEDO DATI MEM PROCESSO \n");
-        get_mem_proc(p_val);                             // MEORIA SINGOLO PROCESSO------------------FUNZIONA
+         printf("\nRICHIEDO DATI MEM PROCESSO  \n");
 
-        //get_mem_sistema();
+         char* process=(char*)malloc(MAX_PID);          // dovrò ciclare su tutti quelli in "file in proc"
+         float fis;
+         float vir;
 
+         // CICLO SUI TUTTI I PROCESSI
 
-           // I VALORIPRESI SONO QUELLI DELLA RAM FISICA , vm rss , vm size della virtuale capire come ottenere valore %MEM che vedi in top
+         for(int i=0;i<quanti;i++){                  // quanti ne controllo
 
-           //prendi vm_rss (ram proc) dividi per 1024 poi dividi per (ram totale/1024)
-        printf("RAM processo == %f\n",*p_val);
+            memset((void*)process,0,MAX_PID);
+            memset((void*)struttura,0,sizeof(cpu_info_t));
+            memset((void*)info_proc,0,sizeof(proc_info_new_t));
+            memset((void*)riempi,0,sizeof(proc_stat_t));
 
-        *p_val=*p_val/1024;
+            pthread_t thread_handle;
 
-        printf("RAM processo == %f\n",*p_val);
+            thread_args_t* args = malloc(sizeof(thread_args_t));
+            args->pid_proc=file_in_proc[i];
+            //args->pid_proc="4046";
+            args->c_i=struttura;
+            args->p_i_n=info_proc;
+            args->p_s=riempi;
+            args->valore_ram=Ram;
+        
+            if (pthread_create(&thread_handle, NULL, get_percent_one, args)) {
+                printf("==> [DRIVER] FATAL ERROR: cannot create thread \nExiting...\n");
+                exit(1);
+            }
 
+            pthread_detach(thread_handle);     
+            fis=0;
+            vir=0;
 
-        float per_mem=(float)(*p_val)/6839.2;
+            //printf("file == > %s\n", file_in_proc[i]);
+            //get_mem_proc(&fis,&vir,file_in_proc[i],Ram);         // MEORIA SINGOLO PROCESSO------------------FUNZIONA
+            //printa((void*)riempi);
 
-        printf("percentuale uso ram == %f\n\n",per_mem*100);
-
-        printf("USCITO DA FUNZIONE");
-
-
-
-
+         }
         
 
-     
+       
 
 
 
 
 
         // free 
-        for (int i = 0; i < n; i++) {
-            free(files[i]);
-        }
-        free(files);
+        //for (int i = 0; i < n; i++) {
+        //    free(files[i]);
+        //}
+        //free(files);
 
         printf("\nDEALLOCATO\n");
 
@@ -221,8 +241,31 @@ int main(int argc,char* argv[]){
 
 }
 ////////////////////////-----------------------------------------------------------------------------
+//void* get_percent_one(char* pid_da_arr,void* struttura_cpu,void* struttura_proc , void* stat_struct);  // ricava percentuali (cpu) di uno
+//
+void* get_percent_one(void* arg_struct){
 
-void get_percent_one(char* pid_da_arr,void* struttura_cpu,void* struttura_proc , void* stat_struct){
+    thread_args_t* args = (thread_args_t*) arg_struct;
+
+        cpu_info_t* struttura_cpu = args->c_i;
+        proc_info_new_t* struttura_proc = args->p_i_n;
+        proc_stat_t* stat_struct= args->p_s;
+
+        char* pid_da_arr=malloc(10);
+        pid_da_arr=args->pid_proc;
+
+        float fis=0;
+        float vir=0;
+
+        
+        get_mem_proc(&fis,&vir,pid_da_arr,args->valore_ram);
+
+        
+        if(fis<0.4){printf("occupazione ram non rilevante, esco\n");
+        return NULL;}
+        printf("percentuale ram utilizzata da %s == %f\n",pid_da_arr,fis);
+
+    
 
     
 
@@ -231,18 +274,36 @@ void get_percent_one(char* pid_da_arr,void* struttura_cpu,void* struttura_proc ,
         get_info_proc(pid_da_arr,(void*)struttura_proc,1);  // prima della sleep
 
         sleep(3);
+       
 
         get_info_tot((void*)struttura_cpu,0);
 
         get_info_proc(pid_da_arr,(void*)struttura_proc,0);
 
+        //printf("printo dati raccolti per processo\n");
 
-        proc_info_new_t* p=(proc_info_new_t*)struttura_proc;
-        cpu_info_t* p1=(cpu_info_t*)struttura_cpu;
-        proc_stat_t* stat=(proc_stat_t*)stat_struct;
+        //printf("user time == %ld,user time after == %ld\n",struttura_proc->time_u,struttura_proc->time_u_after);
+
+        int ris=struttura_proc->time_u_after-struttura_proc->time_u;
+       //int ris_cu=(int)(struttura_proc->time_cu_after-struttura_proc->time_cu); //child
+        //printf("DIFFERENZA Utime_processo == %d\n",ris);
+        int ris_2=struttura_proc->time_k_after-struttura_proc->time_k;
+       // int ris_ck=(int)(struttura_proc->time_ck_after-struttura_proc->time_ck); //child
+        //printf("DIFFERENZA Ktime_processo == %d\n",ris_2);
+
+        int ris_1=struttura_cpu->cpu_usage_after-struttura_cpu->cpu_usage;
+        //printf("DIFFERENZA time CPU == %d\n",ris_1);
+
+        float per=(float)ris/(float)ris_1;
+        printf(" processo %d cpu usage == %f \n",struttura_proc->PID,per*100);
 
 
-       /* printf("RESOCONTO SINGOLO PROCESSO %s \n",p->nome);
+        
+        
+       
+
+
+       /* printf("RESOCONTO SINGOLO PROCESSO %s \n",struttura_proc->nome);
 
         /*printf("\ntrovati dati SISTEMA:\ncpu tot == %d\nmem_usage == %d\n",p1->cpu_usage,p1->mem_usage);
 
@@ -253,29 +314,31 @@ void get_percent_one(char* pid_da_arr,void* struttura_cpu,void* struttura_proc ,
         printf("raccolti dati PROCESSO after: \n tempo_user_a == %ld\n tempo_k_a == %ld\n",p->time_u_after,p->time_k_after);
 */
 
-        int ris=p->time_u_after-p->time_u;
-        int ris_cu=(int)(p->time_cu_after-p->time_cu);
+        /*int ris=struttura_proc->time_u_after-struttura_proc->time_u;
+        int ris_cu=(int)(struttura_proc->time_cu_after-struttura_proc->time_cu);
         printf("DIFFERENZA Utime_processo == %d\n",ris);
-        int ris_2=p->time_k_after-p->time_k;
-        int ris_ck=(int)(p->time_ck_after-p->time_ck);
+        int ris_2=struttura_proc->time_k_after-struttura_proc->time_k;
+        int ris_ck=(int)(struttura_proc->time_ck_after-struttura_proc->time_ck);
         //printf("DIFFERENZA Ktime_processo == %d\n",ris_2);
-        int ris_1=p1->cpu_usage_after-p1->cpu_usage;
+        int ris_1=struttura_cpu->cpu_usage_after-struttura_cpu->cpu_usage;
         printf("DIFFERENZA time CPU == %d\n",ris_1);
         
         float perc=(float)(ris+ris_cu)/(float)ris_1;
         float perc1=(float)(ris_2+ris_ck)/(float)ris_1;
 
-        printf("prcentuale== %f  \n",(perc+perc1)*100);
+        printf("percentuale processo %d == %f  \n",struttura_proc->PID,(perc+perc1)*100);
 
-        stat->cpu_usage_u=perc*100;
-        stat->cpu_usage_k=perc1*100;
+        stat_struct->cpu_usage_u=perc*100;
+        stat_struct->cpu_usage_k=perc1*100;
 
-        //stat->cpu_usage_u=perc;
-        //stat->cpu_usage_k=perc1;
+        //stat_struct->cpu_usage_u=perc;
+        //stat_struct->cpu_usage_k=perc1;
       
-        stat->PID=p->PID;
-        strcpy(stat->nome,p->nome);
-        stat->stato=p->stato;
+        stat_struct->PID=struttura_proc->PID;
+        strcpy(stat_struct->nome,struttura_proc->nome);
+        stat_struct->stato=struttura_proc->stato;*/
+
+        return NULL;
      
 
 }
@@ -309,7 +372,7 @@ void get_info_proc(char* pid,void* struttura, int t){
     strcat(percorso, pid_1);
     strcat(percorso, "/stat");
     if(t!=0){
-    printf("percorso cercato== %s\n",percorso);
+    //printf("percorso cercato== %s\n",percorso);
     }
     FILE* fd=fopen(percorso,"r");
     if(fd==NULL){
@@ -329,7 +392,7 @@ void get_info_proc(char* pid,void* struttura, int t){
     fclose(fd);
     //printf("vediamo %d %s stato %c %d %d %d %d %d %u %lu %lu %lu %lu \n questo %lu %lu %d %d \n",valori_i[0],nome_p,stato,valori_i[1],valori_i[2],valori_i[3],valori_i[4],valori_i[5]
     //          ,val_u,valori_lu[0],valori_lu[1],valori_lu[2],valori_lu[3],valori_lu[4],valori_lu[5],valori_i[6],valori_i[7]);
-    printf("vediamo %d %s stato %c\n questo %lu %lu %d %d \n",valori_i[0],nome_p,stato,valori_lu[4],valori_lu[5],valori_i[6],valori_i[7]);
+    printf("pid %d %s stato %c    questo %lu %lu %d %d \n",valori_i[0],nome_p,stato,valori_lu[4],valori_lu[5],valori_i[6],valori_i[7]);
     
     dati->PID=valori_i[0];
     dati->stato=stato;
@@ -356,7 +419,7 @@ void get_info_proc(char* pid,void* struttura, int t){
     return;
 }
 
-void get_info_tot(void* info_sis, int t){
+void get_info_tot(void* info_sis, int t){    ///////// ? NON SEMPRE 
 
     cpu_info_t* dati=(cpu_info_t*)info_sis;
 
@@ -368,7 +431,7 @@ void get_info_tot(void* info_sis, int t){
         exit(EXIT_FAILURE);
     }
     fscanf(fd,"%s %d %d %d %d %d %d %d \n",n,&v1,&v2,&v3,&v4,&v5,&v6,&v7);
-    int sum=v1+v2+v3+v4+v5+v6+v7;   //somma cpu giusta
+    int sum=v1+v2+v3+v4+v5+v6+v7;   //somma cpu giusta                             ricontrollato giusto
     //printf("ris == %d\n",sum);
     //printf("aperto\n");
 
@@ -407,13 +470,13 @@ char** alloca_m(int n){
     char** m;
     m = malloc(n * sizeof(char *));
     for (int r = 0; r < n; r++){           
-        *(m + r) = malloc(20 * sizeof(char)); // 20 abbastanza arbitrario (dovresti aggiustare) (lunghezza pid)
+        *(m + r) = malloc(20 * sizeof(char)); 
     }
     return m;
 
 }
 
-int popola_ris(char** m,int n, struct dirent** files_1){
+int popola_ris(char** m,int n, struct dirent** files_1){             // SI
     int k=0;
 
     for (int i = 0; i < n; i++) {
@@ -478,45 +541,60 @@ typedef struct proc_stat{
 }proc_stat_t;
 
 */
-void get_mem_proc(float* qui){ 
+void get_mem_proc(float*fisica,float* virtuale,char*pid_p,float Ram_v){                  // SI  
 
-    /*strcat(percorso, "/proc/");
+
+    char* percorso=malloc(20);
+    memset((void*)percorso,0,20);
+    const char* pid_1=pid_p;
+    strcat(percorso, "/proc/");
     strcat(percorso, pid_1);
-    strcat(percorso, "/stat");*/
+    strcat(percorso, "/status");
+    //printf("percorso cercato per memoria processo == %s\n",percorso);
 
-    FILE* file = fopen("/proc/2222/status", "r");
+    FILE* file = fopen(percorso, "r");
     if(file==NULL){
         printf("errore apertura file proc_mem\n");
         exit(EXIT_FAILURE);
-    }
+    }                                               
     char line[128];
     int res=0;
-    FILE* file_1 = fopen("/proc/7696/status", "r");
-    if(file==NULL){
-        printf("errore apertura file proc_mem\n");
+    
+
+    while (fgets(line, 128, file) != NULL){
+        if (strncmp(line, "VmRSS:", 6) == 0){        // fisica      ///////    
+            res = parseLine(line);
+            break;
+        }
+    }
+    fclose(file);
+
+    /*FILE* file_1 = fopen("percorso", "r");
+    if(file_1==NULL){
+        printf("errore apertura  1 file proc_mem\n");          // non riesco a prendere anche la virtuale , non posso aprire due volte il file in lettura???
         exit(EXIT_FAILURE);
     }
     
     char line_1[128];
     int res_1=0;
-
-    while (fgets(line, 128, file) != NULL){
-        if (strncmp(line, "VmRSS:", 6) == 0){        // fisica
-            res = parseLine(line);
-            break;
-        }
-    }
        while (fgets(line_1, 128, file_1) != NULL){
-        if (strncmp(line_1, "VmSize:", 7) == 0){     // virtuale
+        if (strncmp(line_1, "VmSize:", 7) == 0){     // virtuale                 
             res_1 = parseLine(line_1);
             break;
         }
     }
-    fclose(file);
-    fclose(file_1);
-    printf("Memoria fisica proc == %d\n",res);
-    *qui=res;
-    printf("Memoria virtuale proc  == %d\n",res_1);
+    
+    fclose(file_1);*/
+
+    //printf("Memoria fisica proc == %d\n",res);
+
+    float vera_f=(float)(res/1024);
+
+
+    *fisica=(float)(vera_f/Ram_v)*100;
+
+    //printf("Memoria virtuale proc  == %d\n",res_1);
+    //*virtuale=res_1;
     
 
     return;
@@ -531,7 +609,7 @@ int parseLine(char* line){
     return i;
 }
 
-void get_mem_sistema(){
+int get_mem_sistema(){                                    // SI
     struct sysinfo memInfo;
 
     sysinfo (&memInfo);
@@ -542,10 +620,8 @@ void get_mem_sistema(){
 
     after = ((uint64_t)memInfo.totalram * memInfo.mem_unit)/1024;          // giusto valore totale (mem total (RAM))
 
-
-    printf("controllo valori %d mem unit == %d\n",p,memInfo.mem_unit);
-
-    printf("VEDIAMO == %d\n",after);
+    //printf("VEDIAMO == %d\n",after);
+    return after;
 
 
 
