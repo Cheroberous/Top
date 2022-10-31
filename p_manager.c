@@ -4,8 +4,8 @@
 #include <errno.h>             // FINALMENTE I VALORI DELLA CPU USAGE SONO TUTTI GIUSTI, IMPLEMENTA RISPOSTAA SEGNALI
 #include <string.h>
 #include <unistd.h>
-#include <regex.h> 
-                        // IMPLEMENTARE USO MEMORIA
+#include <regex.h>  // kill -9 -1 Kill all processes you can kill.
+#include <signal.h>                      
 #include <sys/types.h>
 #include <sys/dir.h>
 #include <pthread.h>
@@ -17,6 +17,10 @@
 #include "sys/sysinfo.h"
 
 #define QUIT_COMMAND  "QUIT"
+#define STOPPA "stop"
+#define RIPRENDI "resume"
+#define TERMINA "termina"
+#define KILLA "kill"
 #define MAX_PID  10
 
 // implementa struttura con info per ogni  processo 
@@ -93,21 +97,28 @@ int main(int argc,char* argv[]){
     // ORGANIZZO VARIABILI
     struct dirent **files;   // struttura per ls
     int r;
+    int r2;
     char** file_in_proc;                         // array con lista processi
     char *quit_command = QUIT_COMMAND;
     size_t quit_command_len = strlen(quit_command);
-    // richiedo ram totale pc
+    #define QUIT_COMMAND  "QUIT"
+    int stoppa_len=strlen(STOPPA);
+    int resume_len=strlen(RIPRENDI);
+    int ter_len=strlen(TERMINA);
+    int kill_len=strlen(KILLA);   
+     // richiedo ram totale pc
     int r1=get_mem_sistema();
     float Ram=(float)(r1/1024);
-    printf("effettiva ram== %f\n",Ram);
+    //printf("effettiva ram== %f\n",Ram);
 
     //struct proc_info_
     //printf("lunghezza quit command == %ld\n",quit_command_len);
 
-    char*arg1=malloc(20);
-    char*arg2=malloc(20);
-    if (argc > 1) arg1 = argv[1];
-	if (argc > 2) arg2 = argv[2];
+    //char*arg1=malloc(20);
+    //char*arg2=malloc(20);
+    //if (argc > 1) arg1 = argv[1];
+	//if (argc > 2) arg2 = argv[2];
+    printf("il programma lista i processi attivi con stato , percentuali ram e cpu consumate; per mandare signal ai processi è possibile usare\nil formato stop/resume/termina/kill + pid\n");
 
 
     while(1){
@@ -120,27 +131,83 @@ int main(int argc,char* argv[]){
         memset((void*)richiesta,0,20);
         richiesta=fgets(richiesta, 20, stdin);  // prendo input
 
-        //printf("primo carattere == %c\n",richiesta[0]);
-
         int msg_len = strlen(richiesta);
         richiesta[--msg_len]='\0';         //se voglio togliere \n
 
-        //printf("lunghezza == %d\n",msg_len);
+      
 
-
-
-        //while ( msg_len != quit_command_len && memcmp(richiesta, quit_command, quit_command_len)!=0) continue; non so perchè ma da problemi(senza funge)
-
-        if(memcmp(richiesta, quit_command, quit_command_len)==0){printf("qui");break;}
+        if(memcmp(richiesta, quit_command, quit_command_len)==0){printf("qui");break;}   // Controllo se l'utente vuole uscire
     
 
-        //printf("eseguo comando == %s\n",richiesta);
+        printf("eseguo comando == %s\n",richiesta);
+
+        // controllo che tipo di richhiesta ho avuto
+
+        char*cosa=malloc(10);
+        int quale_proc=0;  
+
+        sscanf(richiesta,"%s %d",cosa,&quale_proc);
+
+        printf("interrupt == %s  processo == %d\n",cosa,quale_proc);
+
+        if(quale_proc!=0){         // funziona
+            //terminate kill suspend resume
+            //SIGTERM 15 
+            //SIGKILL 9
+            //SIGSTOP 19
+            //SIGCONT 18
+            /*'D' = UNINTERRUPTABLE_SLEEP
+            'R' = RUNNING & RUNNABLE
+            'S' = INTERRRUPTABLE_SLEEP
+            'T' = STOPPED
+            'Z' = ZOMBIE*/            // devo parsare la stringa-comando e vedere cosa l'utente vuole fare con il processo
+            r2=0;
+            if(memcmp(richiesta, STOPPA, stoppa_len)==0){
+               r2=kill((pid_t)quale_proc,SIGSTOP);    // dovrebbe essere un long int
+                if(r2==0)printf("messo in pausa processo\n");
+                else{printf("processo non stooppabile o inesistente\n");}
+            }
+            if(memcmp(richiesta, RIPRENDI, resume_len)==0){
+               r2=kill((pid_t)quale_proc,SIGCONT);   
+                if(r2==0)printf("processo ristartato\n");
+                else{printf("processo non stooppabile o inesistente\n");}
+
+
+            }
+            if(memcmp(richiesta, KILLA, kill_len)==0){
+               r2=kill((pid_t)quale_proc,SIGKILL);   
+                if(r2==0)printf("processo killato\n");
+                else{printf("processo non stooppabile o inesistente\n");}
+
+
+            }
+            if(memcmp(richiesta, TERMINA, ter_len)==0){
+               r2=kill((pid_t)quale_proc,SIGTERM);   
+                if(r2==0)printf("processo terminato\n");
+                else{printf("processo non stooppabile o inesistente\n");}
+
+
+            }
+
+            
+      
+
+
+        }
+
+
         
-        //----------------------------------------------------------------------------------------
-        // getcwd per la directory corrente
+       
+
+
+
+
+
+
 
 
         //SCANDISCO DIR PROC E POPOLO ARRAY CON PID
+        if(0){
         
         int n = scandir("/proc", &files, NULL, alphasort); // metto risultato scandir nella struct files
 
@@ -212,6 +279,7 @@ int main(int argc,char* argv[]){
             //printa((void*)riempi);
 
          }
+        } // parentesi per evitare di far partire calcolo proc
         
 
        
@@ -569,9 +637,9 @@ void get_mem_proc(float*fisica,float* virtuale,char*pid_p,float Ram_v){         
     }
     fclose(file);
 
-    /*FILE* file_1 = fopen("percorso", "r");
+    /*FILE* file_1 = fopen(percorso, "r");
     if(file_1==NULL){
-        printf("errore apertura  1 file proc_mem\n");          // non riesco a prendere anche la virtuale , non posso aprire due volte il file in lettura???
+        printf("errore apertura  1 file proc_mem\n");          // non riesco a prendere anche la virtuale , -- RIPROVALO (già modificato)
         exit(EXIT_FAILURE);
     }
     

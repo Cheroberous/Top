@@ -12,30 +12,16 @@ USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 
 
 
-//-------------------               implementare invio segnali              --------------------------
-
-signal lezione 05/04
-
-
-
-------------- mappa campi struttura sis in corrispettivi da proc  ( non ricordo )
-
-----                                    inserisci i thread                 -------------------------------
-
-
-calcolo cpu/mem con più thread/processi
-
-il thread potrebbe popolare la ennesima struttura di un array che indica l'ennesimo processo // per ora fatto senza thread
-nessun semaforo richiesto
-
-potrei intercettare ctrl+c per fare una gentle exiting e aspettare i thread
-
 
 -----                                     info generiche sistema                             -------------------- 
 
 
 ,interrupts, fd ,environ
 cat crypto | grep name     -algoritmi cifratura disponibili
+
+
+-------------------------------      separa i file -------------------------------------
+funzioni da una parte dichiarazioni ecc
 
 
 /////////////_----------------------------------------------------------------------------------------------////////////////////////
