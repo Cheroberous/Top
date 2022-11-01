@@ -103,8 +103,7 @@ int main(int argc,char* argv[]){
     int r2;
     char** file_in_proc;                         // array con lista processi
     char *quit_command = QUIT_COMMAND;
-    size_t quit_command_len = strlen(quit_command);
-    #define QUIT_COMMAND  "QUIT"
+    size_t quit_command_len = strlen(quit_command); 
     int stoppa_len=strlen(STOPPA);
     int resume_len=strlen(RIPRENDI);
     int ter_len=strlen(TERMINA);
@@ -112,9 +111,7 @@ int main(int argc,char* argv[]){
     char*cosa=malloc(10);
     char* richiesta=(char*)malloc(20);
     int quale_proc=0;  
-    cpu_info_t* struttura = malloc(sizeof(cpu_info_t));
-    proc_info_new_t* info_proc = malloc(sizeof(proc_info_new_t));
-    proc_stat_t* riempi=malloc(sizeof(proc_stat_t));
+ 
     char* process=(char*)malloc(MAX_PID);          
     float fis;
     float vir;
@@ -126,15 +123,15 @@ int main(int argc,char* argv[]){
     printf("Ram             : %0.2f Mb\n\n",Ram);
 
 
-    printf("- Il programma lista i processi attivi con stato , percentuali ram e cpu consumate; per mandare signal ai processi è possibile usare\n- il formato stop/resume/termina/kill + pid\n");
+    printf("- Il programma lista i processi attivi con stato , percentuali ram e cpu consumate; per mandare signal ai processi è possibile usare\n- il formato stop/resume/termina/kill + pid, per avere i fd di un processo usare filed + pid\n");
     
 
 
 
-    // TEST                              -------- funziona , integra con comnado specifico
-    get_fd_programma(lista_fd,"2259");
+   
 
-    //
+
+
    
     
    // LOOP PRINCIPALE
@@ -144,7 +141,7 @@ int main(int argc,char* argv[]){
         memset((void*)richiesta,0,20); // il for inizializza a 0 le altre strutture
 
 
-        printf("sono nel ciclo\n");
+        printf("inserisci comando\n");
       
        // PRENDO E VERIFICO INPUT
 
@@ -180,8 +177,14 @@ int main(int argc,char* argv[]){
             'S' = INTERRRUPTABLE_SLEEP
             'T' = STOPPED
             'Z' = ZOMBIE*/    
-            printf("interrupt == %s  processo == %d\n",cosa,quale_proc);        
+            printf("comando == %s  processo == %d\n",cosa,quale_proc);
+            char*conv_pid=malloc(MAX_PID);     
+            sprintf(conv_pid, "%d", quale_proc);   
             r2=0;
+            if(memcmp(richiesta,"filed",strlen("filed"))==0){
+                    get_fd_programma(lista_fd,conv_pid);
+
+            }
 
             if(memcmp(richiesta, STOPPA, stoppa_len)==0){
                r2=kill((pid_t)quale_proc,SIGSTOP);    // dovrebbe essere un long int
@@ -203,6 +206,8 @@ int main(int argc,char* argv[]){
                 if(r2==0)printf("processo terminato\n");
                 else{printf("processo non terminabile o inesistente\n");}
             }
+            free(conv_pid);
+
         }
 
 
@@ -210,7 +215,8 @@ int main(int argc,char* argv[]){
 
         //SCANDISCO DIR PROC E POPOLO ARRAY CON PID
 
-        if(0){
+        else{
+            //printf("dovrei far vedere processi\n");
         
         int n = scandir("/proc", &files, NULL, alphasort); // metto risultato scandir nella struct files
 
@@ -225,14 +231,7 @@ int main(int argc,char* argv[]){
       
         int quanti=popola_ris(file_in_proc,n,files);       // filtro risultati       ---------------NUMERO PROCESSI
 
-        /*  check file selezionati
-        printf("stampo file salvati in proc (quelli numerici)\n");
-        
-        for (int j=0;j<quanti;j++){
 
-            printf("file == > %s\n", file_in_proc[j]);
-        }
-        printf("FINE STAMPA\n");*/
 
 
      
@@ -247,8 +246,22 @@ int main(int argc,char* argv[]){
         // dovrò ciclare su tutti quelli in "file in proc"
 
         // CICLO SUI TUTTI I PROCESSI
+        cpu_info_t** lista_struttura=malloc(quanti*sizeof(cpu_info_t*));
+        proc_info_new_t** lista_info_proc=malloc(quanti*sizeof(proc_info_new_t));
+        proc_stat_t** lista_riempi=malloc(quanti*sizeof(proc_stat_t*));
 
-         for(int i=0;i<quanti;i++){                  // quanti ne controllo
+        printf(" NOME                   PID               STATO                CPU            RAM                 VM ");
+
+        for(int i=0;i<quanti;i++){                  // quanti 
+
+        cpu_info_t* struttura = lista_struttura[i];
+        struttura=malloc(sizeof(cpu_info_t));
+
+        proc_info_new_t* info_proc = lista_info_proc[i];
+        info_proc=malloc(sizeof(proc_info_new_t));
+
+        proc_stat_t* riempi=lista_riempi[i];
+        riempi=malloc(sizeof(proc_stat_t));
 
             memset((void*)process,0,MAX_PID);
             memset((void*)struttura,0,sizeof(cpu_info_t));
@@ -259,32 +272,31 @@ int main(int argc,char* argv[]){
 
             thread_args_t* args = malloc(sizeof(thread_args_t));
             args->pid_proc=file_in_proc[i];
-            //args->pid_proc="4046";
+            //args->pid_proc="9341";
             args->c_i=struttura;
             args->p_i_n=info_proc;
             args->p_s=riempi;
             args->valore_ram=Ram;
+
+           
         
             if (pthread_create(&thread_handle, NULL, get_percent_one, args)) {
-                printf("==> FATAL ERROR: cannot create thread \nExiting...\n");
+                printf("FATAL ERROR: cannot create thread \nExiting...\n");
                 exit(1);
             }
 
             pthread_detach(thread_handle);     
-            fis=0;
-            vir=0;
+           
 
-            //printf("file == > %s\n", file_in_proc[i]);
-            //get_mem_proc(&fis,&vir,file_in_proc[i],Ram);         // MEORIA SINGOLO PROCESSO------------------FUNZIONA
-            //printa((void*)riempi);
+            
 
-         }
-          // free 
-        for (int i = 0; i < quanti; i++) {
-            free(files[i]);
-        }
-        free(files);
-        printf("\nDEALLOCATO\n");        // TESTALO
+         } 
+          
+        //for (int i = 0; i < quanti; i++) {
+        //    free(file_in_proc[i]);
+        //}
+       
+        //printf("\nDEALLOCATO\n");        // TESTALO*/
 
         } // parentesi per evitare di far partire calcolo proc
         
@@ -292,6 +304,8 @@ int main(int argc,char* argv[]){
  
 
     }
+
+
 
 
     printf("entrato comando quit \n");
@@ -311,6 +325,10 @@ void* get_percent_one(void* arg_struct){
         proc_info_new_t* struttura_proc = args->p_i_n;
         proc_stat_t* stat_struct= args->p_s;
 
+        memset(struttura_cpu,0,sizeof(cpu_info_t));
+        memset(struttura_proc,0,sizeof(proc_info_new_t));
+        memset(stat_struct,0,sizeof(proc_stat_t));
+
         char* pid_da_arr=malloc(10);
         pid_da_arr=args->pid_proc;
 
@@ -321,9 +339,13 @@ void* get_percent_one(void* arg_struct){
         get_mem_proc(&fis,&vir,pid_da_arr,args->valore_ram);
 
         
-        if(fis<0.4){printf("occupazione ram non rilevante, esco\n");
+        if(fis<0.4){
+        //printf("occupazione ram non rilevante esco\n");
         return NULL;}
-        printf("percentuale ram utilizzata da %s == %f, memoria virtuale utilizzata == %fKb\n",pid_da_arr,fis,vir);
+        
+        
+        
+        
 
     
 
@@ -341,61 +363,32 @@ void* get_percent_one(void* arg_struct){
 
         //printf("printo dati raccolti per processo\n");
 
-        //printf("user time == %ld,user time after == %ld\n",struttura_proc->time_u,struttura_proc->time_u_after);
+        //printf("processo %d user time == %ld,user time after == %ld\n",struttura_proc->PID,struttura_proc->time_u,struttura_proc->time_u_after);
 
-        int ris=struttura_proc->time_u_after-struttura_proc->time_u;
+        int ris=(int)(struttura_proc->time_u_after-struttura_proc->time_u);
        //int ris_cu=(int)(struttura_proc->time_cu_after-struttura_proc->time_cu); //child
-        //printf("DIFFERENZA Utime_processo == %d\n",ris);
-        int ris_2=struttura_proc->time_k_after-struttura_proc->time_k;
-       // int ris_ck=(int)(struttura_proc->time_ck_after-struttura_proc->time_ck); //child
+       
+        //printf("DIFFERENZA Utime_processo %d== %d\n",struttura_proc->PID,ris);
+
+        int ris_2=(int)struttura_proc->time_k_after-(int)struttura_proc->time_k;                           //  -- se voglio conteggiare il k time
+       // int ris_ck=(int)(struttura_proc->time_ck_after-struttura_proc->time_ck); //child              
         //printf("DIFFERENZA Ktime_processo == %d\n",ris_2);
+
+        ris=ris+ris_2;
 
         int ris_1=struttura_cpu->cpu_usage_after-struttura_cpu->cpu_usage;
         //printf("DIFFERENZA time CPU == %d\n",ris_1);
 
         float per=(float)ris/(float)ris_1;
-        printf(" processo %d cpu usage == %f \n",struttura_proc->PID,per*100);
-
-
         
-        
-       
+        //printf("nome %s  pid %d  stato %c cpu usage %0.3f percentuale ram  == %0.2f, memoria virtuale  == %0.2fKb\n",struttura_proc->nome,struttura_proc->PID,struttura_proc->stato,per*100,fis,vir);
+        printf(" %s              %d            %c                 %0.3f            %0.2f                   %0.2fKb\n",struttura_proc->nome,struttura_proc->PID,struttura_proc->stato,per*100,fis,vir);
 
+        //printf(" processo %d cpu usage == %0.3f \n",struttura_proc->PID,per*100);
+   
 
-       /* printf("RESOCONTO SINGOLO PROCESSO %s \n",struttura_proc->nome);
-
-        /*printf("\ntrovati dati SISTEMA:\ncpu tot == %d\nmem_usage == %d\n",p1->cpu_usage,p1->mem_usage);
-
-        printf("trovati dati SISTEMA after :\ncpu tot == %d\nmem_usage == %d\n",p1->cpu_usage_after,p1->mem_usage);
-
-        printf("\nraccolti dati PROCESSO: \n tempo_user == %ld\n tempo_k == %ld\n",p->time_u,p->time_k);
-
-        printf("raccolti dati PROCESSO after: \n tempo_user_a == %ld\n tempo_k_a == %ld\n",p->time_u_after,p->time_k_after);
-*/
-
-        /*int ris=struttura_proc->time_u_after-struttura_proc->time_u;
-        int ris_cu=(int)(struttura_proc->time_cu_after-struttura_proc->time_cu);
-        printf("DIFFERENZA Utime_processo == %d\n",ris);
-        int ris_2=struttura_proc->time_k_after-struttura_proc->time_k;
-        int ris_ck=(int)(struttura_proc->time_ck_after-struttura_proc->time_ck);
-        //printf("DIFFERENZA Ktime_processo == %d\n",ris_2);
-        int ris_1=struttura_cpu->cpu_usage_after-struttura_cpu->cpu_usage;
-        printf("DIFFERENZA time CPU == %d\n",ris_1);
-        
-        float perc=(float)(ris+ris_cu)/(float)ris_1;
-        float perc1=(float)(ris_2+ris_ck)/(float)ris_1;
-
-        printf("percentuale processo %d == %f  \n",struttura_proc->PID,(perc+perc1)*100);
-
-        stat_struct->cpu_usage_u=perc*100;
-        stat_struct->cpu_usage_k=perc1*100;
-
-        //stat_struct->cpu_usage_u=perc;
-        //stat_struct->cpu_usage_k=perc1;
       
-        stat_struct->PID=struttura_proc->PID;
-        strcpy(stat_struct->nome,struttura_proc->nome);
-        stat_struct->stato=struttura_proc->stato;*/
+        
 
         return NULL;
      
@@ -435,8 +428,8 @@ void get_info_proc(char* pid,void* struttura, int t){
     }
     FILE* fd=fopen(percorso,"r");
     if(fd==NULL){
-        printf("errore apertura il processonon esiste\n");
-        exit(EXIT_FAILURE);
+        printf("errore apertura il processo non esiste\n");
+        //exit(EXIT_FAILURE);
     }
     // 14 ,15 u k 16 17 figli
     char line[128];
@@ -451,7 +444,7 @@ void get_info_proc(char* pid,void* struttura, int t){
     fclose(fd);
     //printf("vediamo %d %s stato %c %d %d %d %d %d %u %lu %lu %lu %lu \n questo %lu %lu %d %d \n",valori_i[0],nome_p,stato,valori_i[1],valori_i[2],valori_i[3],valori_i[4],valori_i[5]
     //          ,val_u,valori_lu[0],valori_lu[1],valori_lu[2],valori_lu[3],valori_lu[4],valori_lu[5],valori_i[6],valori_i[7]);
-    printf("pid %d %s stato %c    questo %lu %lu %d %d \n",valori_i[0],nome_p,stato,valori_lu[4],valori_lu[5],valori_i[6],valori_i[7]);
+    //printf("pid %d %s stato %c    questo %lu %lu %d %d \n",valori_i[0],nome_p,stato,valori_lu[4],valori_lu[5],valori_i[6],valori_i[7]);
     
     dati->PID=valori_i[0];
     dati->stato=stato;
@@ -609,7 +602,7 @@ void get_mem_proc(float*fisica,float* virtuale,char*pid_p,float Ram_v){         
     strcat(percorso, "/proc/");
     strcat(percorso, pid_1);
     strcat(percorso, "/status");
-    printf("percorso cercato per memoria processo == %s\n",percorso);
+    //printf("percorso cercato per memoria processo == %s\n",percorso);
 
     FILE* file = fopen(percorso, "r");
     if(file==NULL){
@@ -730,8 +723,8 @@ void get_fd_programma(struct dirent** file_d,char* process){
      int n = scandir(percorso, &file_d, NULL, alphasort); // n = quanti
 
         if (n < 0) {
-            printf("errore richiesta file in proc");
-            exit(EXIT_FAILURE);
+            printf("errore richiesta file in proc ( non accessibile o terminato\n");
+            //exit(EXIT_FAILURE);
         }
 
      for (int i = 0; i < n; i++) {
