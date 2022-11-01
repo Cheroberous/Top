@@ -1,15 +1,11 @@
-USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
-1. Top:
-   implement  a process monitor that allows to
-   - terminate          SIGTERM    (?)
-   - kill              SIGKILL 
-   - suspend     ?    kill -TSTP $PID_OF_PROCESS    /  $ kill -STOP 16143
-   - resume     SIGCONT
-   the running processes
 
-   
-   ---------------- Ricordati che esistono i puntatori a funzione
 
+
+
+         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+         
+         - funzioni , main e intestazioni in file diversi
+         - potrei prendere fd aperti da singolo processo dettagli +pid
 
 
 
@@ -19,9 +15,9 @@ USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 ,interrupts, fd ,environ
 cat crypto | grep name     -algoritmi cifratura disponibili
 
+-- posso prendere numero thread processo specifico /proc/pid/status
+-- la priority è il 18° val in pid/stat
 
--------------------------------      separa i file -------------------------------------
-funzioni da una parte dichiarazioni ecc
 
 
 /////////////_----------------------------------------------------------------------------------------------////////////////////////
