@@ -2,10 +2,10 @@
 
 
 
-         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+    
          
          - funzioni , main e intestazioni in file diversi
-         - potrei prendere fd aperti da singolo processo dettagli +pid
+         
 
 
 
